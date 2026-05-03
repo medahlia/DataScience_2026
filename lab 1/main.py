@@ -1,9 +1,3 @@
-# ============================================================
-#   Лабораторна робота: Парсинг, аналіз та моделювання даних
-#   Джерело: https://stockanalysis.com/etf/gld/history/
-#   Об'єкт: ETF GLD – ціна золота (ціна закриття)
-# ============================================================
-
 import requests
 import pandas as pd
 import numpy as np
@@ -14,34 +8,26 @@ import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
 import os
 
-# ============================================================
-# 1. ПАРСИНГ САЙТУ
-# ============================================================
-
 def parse_gold_prices() -> pd.DataFrame:
     """
-    Парсинг цін ETF GLD (SPDR Gold Shares).
-
-    Спроба 1: GET-запит до Yahoo Finance API
-               (аналог даних https://finance.yahoo.com/quote/GLD/)
-    Спроба 2: якщо мережа недоступна — використовуються вбудовані реальні
-               щоденні ціни GLD за 2019–2024 рр. (джерело: stockanalysis.com).
+    Парсинг цін ETF GLD.
+    дані: https://finance.yahoo.com/quote/GLD/)
     """
     ticker = "GLD"
     url = (
         f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
-        f"?interval=1d&range=5y"
+        f"?interval=1d&period1=1420070400&period2=1577836800" # period
     )
     headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 
     print("=" * 60)
-    print("1. ПАРСИНГ САЙТУ")
-    print(f"   Тікер  : {ticker}")
-    print(f"   Джерело: https://finance.yahoo.com/quote/GLD/")
+    print("1. Парсинг сайту")
+    print(f"Тікер: {ticker}")
+    print(f"Джерело: https://finance.yahoo.com/quote/GLD/")
 
     try:
         response = requests.get(url, headers=headers, timeout=10)
-        print(f"   HTTP статус: {response.status_code}")
+        print(f"HTTP статус: {response.status_code}")
         if response.status_code == 200:
             data = response.json()
             result = data["chart"]["result"][0]
@@ -58,32 +44,23 @@ def parse_gold_prices() -> pd.DataFrame:
             df.dropna(subset=["Close"], inplace=True)
             df.sort_values("Date", inplace=True)
             df.reset_index(drop=True, inplace=True)
-            print(f"   Зчитано рядків : {len(df)}")
-            print(f"   Період : {df['Date'].iloc[0].date()} → {df['Date'].iloc[-1].date()}")
+            print(f"Рядків: {len(df)}")
+            print(f"Період: {df['Date'].iloc[0].date()} → {df['Date'].iloc[-1].date()}")
             return df
     except Exception as e:
-        print(f"   Мережа недоступна ({e})")
-
-    # ── ВБУДОВАНІ РЕАЛЬНІ ДАНІ (ціни закриття GLD, щомісячно 2019–2024) ──────
-    # Джерело: stockanalysis.com/etf/gld/history  (верифіковані дані)
-
+        print(f"!Мережа недоступна ({e})!")
 
 
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Повертає DataFrame вже чистим."""
     return df
 
-
-# ============================================================
-# 2. ЗБЕРЕЖЕННЯ ДАНИХ У CSV
-# ============================================================
 
 def save_to_csv(df: pd.DataFrame, filename: str = "gold_prices.csv") -> None:
     df.to_csv(filename, index=False, encoding="utf-8-sig")
     print("=" * 60)
-    print("2. ЗБЕРЕЖЕННЯ ДАНИХ")
-    print(f"   Файл збережено: {os.path.abspath(filename)}")
-    print(f"   Рядків у файлі: {len(df)}")
+    print("2. Збереження даних")
+    print(f"Файл збережено: {os.path.abspath(filename)}")
+    print(f"Рядків: {len(df)}")
 
 
 # ============================================================
@@ -108,54 +85,42 @@ def plot_trend(prices: np.ndarray, Yout: np.ndarray, title: str, filename: str) 
 
 
 def analyze_trend(prices: np.ndarray) -> None:
-    """
-    Оцінка динаміки тренду: загальна зміна, середньорічний приріст.
-    """
     print("=" * 60)
-    print("3. ОЦІНКА ДИНАМІКИ ТРЕНДУ")
+    print("3. Оцінка динаміки тренду")
     total_change = prices[-1] - prices[0]
     pct_change = (total_change / prices[0]) * 100
     n = len(prices)
     avg_daily_chg = total_change / n
-    print(f"   Перша ціна  : {prices[0]:.2f} USD")
-    print(f"   Остання ціна: {prices[-1]:.2f} USD")
-    print(f"   Загальна зміна    : {total_change:+.2f} USD ({pct_change:+.2f}%)")
-    print(f"   Середня зміна/день: {avg_daily_chg:+.4f} USD")
+    print(f"Перша ціна: {prices[0]:.2f} USD")
+    print(f"Остання ціна: {prices[-1]:.2f} USD")
+    print(f"Загальна зміна: {total_change:+.2f} USD ({pct_change:+.2f}%)")
     slope = MNK_AV_Detect(prices)
-    direction = "зростаючий ↑" if slope > 0 else "спадаючий ↓"
-    print(f"   Нахил МНК-моделі  : {slope:.6f}  → тренд {direction}")
+    direction = "↑" if slope > 0 else "↓"
+    print(f"Нахил МНК-моделі: {slope:.6f}({direction})")
 
-
-# ============================================================
-# 4. СТАТИСТИЧНІ ХАРАКТЕРИСТИКИ
-# ============================================================
 
 def stat_characteristics(prices: np.ndarray, label: str) -> dict:
-    """
-    Визначення статистичних характеристик вибірки.
-    (аналог Stat_characteristics_in з лекції)
-    """
     Yout = MNK_Stat_characteristics(prices)
     residuals = np.array([prices[i] - Yout[i, 0] for i in range(len(prices))])
 
-    m_mean   = float(np.mean(residuals))
+    m_mean = float(np.mean(residuals))
     m_median = float(np.median(residuals))
-    dS       = float(np.var(residuals))
-    scvS     = mt.sqrt(dS)
-    skew     = float(pd.Series(residuals).skew())
-    kurt     = float(pd.Series(residuals).kurt())
+    dS = float(np.var(residuals))
+    scvS = mt.sqrt(dS)
+    skew = float(pd.Series(residuals).skew())
+    kurt = float(pd.Series(residuals).kurt())
 
     print("=" * 60)
-    print(f"4. СТАТИСТИЧНІ ХАРАКТЕРИСТИКИ: {label}")
-    print(f"   Кількість елементів вибірки : {len(prices)}")
-    print(f"   Математичне сподівання (mean): {m_mean:.4f}")
-    print(f"   Медіана залишків             : {m_median:.4f}")
-    print(f"   Дисперсія                    : {dS:.4f}")
-    print(f"   СКВ (σ)                      : {scvS:.4f}")
-    print(f"   Асиметрія                    : {skew:.4f}")
-    print(f"   Ексцес                       : {kurt:.4f}")
-    print(f"   Мін / Макс ціни              : {prices.min():.2f} / {prices.max():.2f} USD")
-    print(f"   Розмах                       : {prices.max() - prices.min():.2f} USD")
+    print(f"4. Статистичні характеристики: {label}")
+    print(f"Кількість елементів вибірки: {len(prices)}")
+    print(f"Математичне сподівання (mean): {m_mean:.4f}")
+    print(f"Медіана залишків: {m_median:.4f}")
+    print(f"Дисперсія: {dS:.4f}")
+    print(f"СКВ: {scvS:.4f}")
+    print(f"Асиметрія: {skew:.4f}")
+    print(f"Ексцес: {kurt:.4f}")
+    print(f"Мін / Макс ціни: {prices.min():.2f} / {prices.max():.2f} USD")
+    print(f"Розмах: {prices.max() - prices.min():.2f} USD")
 
     # гістограма залишків
     plt.figure(figsize=(7, 4))
@@ -169,97 +134,87 @@ def stat_characteristics(prices: np.ndarray, label: str) -> dict:
     hist_file = "histogram_residuals.png"
     plt.savefig(hist_file, dpi=120)
     plt.close()
-    print(f"   Гістограму збережено: {os.path.abspath(hist_file)}")
+    print(f"Гістограму збережено: {os.path.abspath(hist_file)}")
 
     return {"mean": m_mean, "median": m_median, "var": dS, "std": scvS,
             "skew": skew, "kurt": kurt, "min": prices.min(), "max": prices.max()}
 
 
-# ============================================================
-# МНК-ФУНКЦІЇ (адаптовані з лекційного коду)
-# ============================================================
-
 def MNK_Stat_characteristics(S0: np.ndarray) -> np.ndarray:
-    """МНК згладжування для визначення статистичних характеристик залишків."""
-    n   = len(S0)
+    n = len(S0)
     Yin = np.zeros((n, 1))
-    F   = np.ones((n, 3))
+    F = np.ones((n, 3))
     for i in range(n):
         Yin[i, 0] = float(S0[i])
-        F[i, 1]   = float(i)
-        F[i, 2]   = float(i * i)
-    FT    = F.T
-    C     = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
-    Yout  = F.dot(C)
+        F[i, 1] = float(i)
+        F[i, 2] = float(i * i)
+    FT = F.T
+    C = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
+    Yout = F.dot(C)
     return Yout
 
 
 def MNK(S0: np.ndarray) -> np.ndarray:
-    """МНК квадратична регресія з виведенням коефіцієнтів."""
-    n   = len(S0)
+    n = len(S0)
     Yin = np.zeros((n, 1))
-    F   = np.ones((n, 3))
+    F = np.ones((n, 3))
     for i in range(n):
         Yin[i, 0] = float(S0[i])
-        F[i, 1]   = float(i)
-        F[i, 2]   = float(i * i)
-    FT   = F.T
-    C    = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
+        F[i, 1] = float(i)
+        F[i, 2] = float(i * i)
+    FT = F.T
+    C = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
     Yout = F.dot(C)
-    print(f"   Регресійна МНК-модель:")
-    print(f"   y(t) = {C[0,0]:.6f}  +  {C[1,0]:.6f} * t  +  {C[2,0]:.8f} * t²")
+    print(f"Регресійна МНК-модель:")
+    print(f"y(t) = {C[0,0]:.6f}  +  {C[1,0]:.6f} * t  +  {C[2,0]:.8f} * t^2")
     return Yout
 
 
 def MNK_AV_Detect(S0: np.ndarray) -> float:
-    """Повертає лінійний коефіцієнт МНК (нахил тренду)."""
-    n   = len(S0)
+    n = len(S0)
     Yin = np.zeros((n, 1))
-    F   = np.ones((n, 3))
+    F = np.ones((n, 3))
     for i in range(n):
         Yin[i, 0] = float(S0[i])
-        F[i, 1]   = float(i)
-        F[i, 2]   = float(i * i)
+        F[i, 1] = float(i)
+        F[i, 2] = float(i * i)
     FT = F.T
-    C  = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
+    C = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
     return float(C[1, 0])
 
 
 def MNK_Extrapol(S0: np.ndarray, koef: int) -> np.ndarray:
-    """МНК екстраполяція на koef кроків вперед."""
-    n   = len(S0)
+    n = len(S0)
     Yin = np.zeros((n, 1))
-    F   = np.ones((n, 3))
+    F = np.ones((n, 3))
     for i in range(n):
         Yin[i, 0] = float(S0[i])
-        F[i, 1]   = float(i)
-        F[i, 2]   = float(i * i)
-    FT   = F.T
-    C    = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
+        F[i, 1] = float(i)
+        F[i, 2] = float(i * i)
+    FT = F.T
+    C = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
     Yout = np.zeros((n + koef, 1))
     for i in range(n + koef):
         Yout[i, 0] = C[0,0] + C[1,0]*i + C[2,0]*i*i
-    print(f"   МНК-прогноз: y(t) = {C[0,0]:.4f} + {C[1,0]:.6f}*t + {C[2,0]:.8f}*t²")
+    print(f"МНК-прогноз: y(t) = {C[0,0]:.4f} + {C[1,0]:.6f}*t + {C[2,0]:.8f}*t^2")
     return Yout
 
 
 def r2_score_mnk(prices: np.ndarray, Yout: np.ndarray, label: str) -> float:
-    """Коефіцієнт детермінації R² для МНК-моделі (з лекційного коду)."""
-    n           = len(prices)
-    numerator   = sum((prices[i] - Yout[i, 0])**2 for i in range(n))
-    mean_y      = np.mean(prices)
+    n = len(prices)
+    numerator = sum((prices[i] - Yout[i, 0])**2 for i in range(n))
+    mean_y = np.mean(prices)
     denominator = sum((prices[i] - mean_y)**2 for i in range(n))
-    R2          = 1 - numerator / denominator
-    print(f"   [{label}] Коефіцієнт детермінації R² = {R2:.6f}")
+    R2 = 1 - numerator / denominator
+    print(f"[{label}] Коефіцієнт детермінації R^2 = {R2:.6f}")
     return R2
 
 
 def sliding_window_clean(S0: np.ndarray, n_wind: int) -> np.ndarray:
-    """Очищення аномальних вимірів алгоритмом ковзного вікна (sliding window)."""
-    n      = len(S0)
+    n = len(S0)
     j_wind = mt.ceil(n - n_wind) + 1
-    Midi   = np.zeros(n)
-    wind   = np.zeros(n_wind)
+    Midi = np.zeros(n)
+    wind = np.zeros(n_wind)
     for j in range(j_wind):
         for i in range(n_wind):
             wind[i] = S0[j + i]
@@ -275,29 +230,24 @@ def sliding_window_clean(S0: np.ndarray, n_wind: int) -> np.ndarray:
 # ============================================================
 
 def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
-    """
-    Синтез синтетичних даних з тим самим трендом і стат. характеристиками,
-    що й реальні дані. Верифікація через R² та порівняльний графік.
-    """
     print("=" * 60)
-    print("5. СИНТЕЗ ТА ВЕРИФІКАЦІЯ МОДЕЛІ ДАНИХ (МНК)")
+    print("5. Синтез та верифікація моделі даних")
 
-    n      = len(prices)
+    n = len(prices)
     n_wind = 5
-    koef   = mt.ceil(n * 0.2)       # прогноз на 20% від обсягу вибірки
+    koef = mt.ceil(n * 0.2) # прогноз на 20% від обсягу вибірки
 
-    # --- очищення від аномалій ---
     prices_clean = sliding_window_clean(prices, n_wind)
 
     # --- МНК-згладжування реальних даних ---
-    print("\n   --- МНК ЗГЛАДЖУВАННЯ ---")
+    print("\n   --- МНК-згладжування ---")
     Yout_smooth = MNK(prices_clean)
-    R2_smooth   = r2_score_mnk(prices_clean, Yout_smooth, "МНК-згладжування")
+    R2_smooth = r2_score_mnk(prices_clean, Yout_smooth, "МНК-згладжування")
 
     # --- МНК-прогнозування ---
-    print("\n   --- МНК ПРОГНОЗУВАННЯ ---")
+    print("\n   --- МНК-прогнозування ---")
     Yout_extrapol = MNK_Extrapol(prices_clean, koef)
-    R2_extrapol   = r2_score_mnk(prices_clean, Yout_extrapol[:n], "МНК-прогнозування (на навч. вибірці)")
+    R2_extrapol = r2_score_mnk(prices_clean, Yout_extrapol[:n], "МНК-прогнозування")
 
     # --- синтетичні дані: тренд МНК + нормальний шум зі стат. хар-ками реальних залишків ---
     synthetic = np.array([Yout_smooth[i, 0] + np.random.normal(stats["mean"], stats["std"])
@@ -343,7 +293,7 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     print(f"   Графік збережено: {os.path.abspath('verification_real_vs_synthetic.png')}")
 
 
-# ============================================================
+# ============================================================ прибрати потім
 # 6. АНАЛІЗ РЕЗУЛЬТАТІВ
 # ============================================================
 
@@ -387,7 +337,7 @@ def print_analysis_summary(prices: np.ndarray, stats: dict) -> None:
 if __name__ == "__main__":
 
     # 1. Парсинг
-    df_raw   = parse_gold_prices()
+    df_raw = parse_gold_prices()
     df_clean = clean_dataframe(df_raw)
 
     # 2. Збереження у CSV
@@ -410,5 +360,3 @@ if __name__ == "__main__":
     print_analysis_summary(prices, stats)
 
     print("=" * 60)
-    print("Лабораторну роботу виконано успішно!")
-    print("Файли збережено у поточній директорії.")
