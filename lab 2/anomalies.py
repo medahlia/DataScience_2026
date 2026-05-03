@@ -76,20 +76,4 @@ def save_anomaly_csv(df_clean: pd.DataFrame, prices_anom: np.ndarray,
     print(f"Типи: { {t: anomaly_types.count(t) for t in set(anomaly_types)} }")
 
 
-def plot_anomalies(prices_orig: np.ndarray, prices_anom: np.ndarray,
-                   anomaly_indices: list, filename: str = "anomalies_injected.png") -> None:
-    plt.figure(figsize=(13, 5))
-    plt.plot(prices_orig, color="steelblue", linewidth=1, label="Оригінальні дані")
-    plt.plot(prices_anom, color="gray", linewidth=0.8, alpha=0.7, label="З аномаліями")
-    plt.scatter(anomaly_indices, prices_anom[anomaly_indices],
-                color="red", zorder=5, s=40, label="Аномалії (введені)")
-    plt.title("Введення аномальних вимірів до часового ряду ETF GLD", fontsize=13)
-    plt.xlabel("Індекс спостереження")
-    plt.ylabel("Ціна закриття, USD")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(filename, dpi=120)
-    plt.close()
-    print(f"Графік збережено: {os.path.abspath(filename)}")
-
 

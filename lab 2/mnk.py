@@ -1,30 +1,51 @@
-import mean_squared_error
-import requests
-import pandas as pd
-import numpy as np
+"""
+mnk.py — Методи найменших квадратів (МНК / LSM).
+Поліноміальна регресія ступенів 1–4, екстраполяція.
+"""
 import math as mt
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import os, random, warnings
-warnings.filterwarnings("ignore")
+import numpy as np
 
 
-def mnk_poly(S0: np.ndarray, degree: int = 2) -> tuple:
+#????????????
+def _build_vandermonde(n: int, degree: int) -> np.ndarray:
+    """Матриця Вандермонда розміром (n, degree+1)."""
+    F = np.ones((n, degree + 1))
+    for i in range(n):
+        for d in range(1, degree + 1):
+            F[i, d] = float(i ** d)
+    return F
+
+
+def mnk_poly(S0: np.ndarray, degree: int = 2) -> tuple[np.ndarray, np.ndarray]:
     """
-    МНК поліноміальна регресія довільного ступеня.
-    Повертає: (Yout, coefficients)
+    МНК-апроксимація поліномом заданого ступеня.
+    Повертає (Yout, C) — згладжений ряд та коефіцієнти.
     """
     n = len(S0)
-    F = np.zeros((n, degree + 1))
-    for d in range(degree + 1):
-        F[:, d] = np.arange(n) ** d
-    Yin = S0.reshape(-1, 1)
+    Yin = S0.reshape(-1, 1).astype(float)
+    F = _build_vandermonde(n, degree)
     FT = F.T
     C = np.linalg.inv(FT @ F) @ FT @ Yin
     Yout = F @ C
     return Yout, C
 
+"""
+def mnk_extrapol(S0: np.ndarray, koef: int, degree: int = 2) -> np.ndarray:
+    
+    #МНК-екстраполяція на koef кроків вперед.
+    #Повертає масив довжиною (n + koef, 1).
+    
+    n = len(S0)
+    _, C = mnk_poly(S0, degree)
+    total = n + koef
+    Yout = np.zeros((total, 1))
+    for i in range(total):
+        val = 0.0
+        for d in range(degree + 1):
+            val += C[d, 0] * (i ** d)
+        Yout[i, 0] = val
+    return Yout
+"""
 
 def mnk_extrapol_poly(S0: np.ndarray, koef: int, degree: int = 2) -> np.ndarray:
     """МНК прогноз на koef точок вперед."""
@@ -42,7 +63,7 @@ def mnk_extrapol_poly(S0: np.ndarray, koef: int, degree: int = 2) -> np.ndarray:
     Yout = F_full @ C
     return Yout
 
-
+"""
 def r2_score_mnk(prices: np.ndarray, Yout: np.ndarray, label: str = "") -> float:
     n = len(prices)
     residuals = prices - Yout[:n, 0]
@@ -52,76 +73,36 @@ def r2_score_mnk(prices: np.ndarray, Yout: np.ndarray, label: str = "") -> float
     if label:
         print(f"[{label}] R² = {R2:.6f}")
     return R2
+"""
 
 
-def optimize_polynomial_degree(prices: np.ndarray,
-                               max_degree: int = 6,
-                               test_ratio: float = 0.2) -> int:
-    """
-    Підбір оптимального ступеня полінома за показниками:
-      - MSE (mean squared error) на тестовій вибірці
-      - MAE (mean absolute error)
-      - R² на тестовій вибірці
-      - AIC (Akaike Information Criterion) — штраф за складність
+# ── Зворотна сумісність: оригінальні функції (квадратична, degree=2) ──────────
 
-    Критерій вибору: мінімальний AIC (баланс якості та складності).
-    """
-    print("=" * 60)
-    print("5. Оптимізація моделі — вибір ступеня полінома")
-    n = len(prices)
-    n_train = int(n * (1 - test_ratio))
-    train = prices[:n_train]
-    test = prices[n_train:]
+def MNK_Stat_characteristics(S0: np.ndarray) -> np.ndarray:
+    Yout, _ = mnk_poly(S0, degree=2)
+    return Yout
 
-    results = []
-    print(f"{'Ступінь':>8} {'MSE_test':>12} {'MAE_test':>12} {'R2_train':>10} {'AIC':>12}")
-    print("-" * 60)
 
-    for degree in range(1, max_degree + 1):
-        # навчання на train
-        F_train = np.array([[i ** d for d in range(degree + 1)] for i in range(n_train)])
-        C = np.linalg.lstsq(F_train, train, rcond=None)[0]
+def MNK(S0: np.ndarray) -> np.ndarray:
+    Yout, C = mnk_poly(S0, degree=2)
+    print(f"Регресійна МНК-модель:")
+    print(f"y(t) = {C[0, 0]:.6f}  +  {C[1, 0]:.6f} * t  +  {C[2, 0]:.8f} * t^2")
+    return Yout
 
-        # оцінка на test
-        F_test = np.array([[(n_train + i) ** d for d in range(degree + 1)] for i in range(len(test))])
-        pred_test = F_test @ C
 
-        mse = mean_squared_error(test, pred_test)
-        mae = mean_absolute_error(test, pred_test)
+def MNK_AV_Detect(S0: np.ndarray) -> float:
+    _, C = mnk_poly(S0, degree=2)
+    return float(C[1, 0])
 
-        # R² на train
-        pred_train = F_train @ C
-        r2_train = r2_score_mnk(train, pred_train.reshape(-1, 1))
 
-        # AIC: n*ln(MSE) + 2*(degree+1)
-        aic = n_train * np.log(np.mean((train - pred_train) ** 2) + 1e-10) + 2 * (degree + 1)
+#???????????/////
+def mnk_extrapol(S0, koef, degree):
+    pass
 
-        results.append({"degree": degree, "mse": mse, "mae": mae, "r2": r2_train, "aic": aic})
-        print(f"{degree:>8} {mse:>12.4f} {mae:>12.4f} {r2_train:>10.6f} {aic:>12.4f}")
 
-    best = min(results, key=lambda x: x["aic"])
-    print(f"\n✔ Оптимальний ступінь полінома: {best['degree']} (AIC={best['aic']:.4f})")
-
-    # графік MSE та AIC за ступенями
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    degrees = [r["degree"] for r in results]
-    axes[0].plot(degrees, [r["mse"] for r in results], "o-", color="steelblue")
-    axes[0].axvline(best["degree"], color="red", linestyle="--", label=f"Оптимум: {best['degree']}")
-    axes[0].set_title("MSE на тестовій вибірці")
-    axes[0].set_xlabel("Ступінь полінома")
-    axes[0].set_ylabel("MSE")
-    axes[0].legend()
-
-    axes[1].plot(degrees, [r["aic"] for r in results], "o-", color="crimson")
-    axes[1].axvline(best["degree"], color="steelblue", linestyle="--", label=f"Оптимум: {best['degree']}")
-    axes[1].set_title("AIC (штраф за складність)")
-    axes[1].set_xlabel("Ступінь полінома")
-    axes[1].set_ylabel("AIC")
-    axes[1].legend()
-
-    plt.tight_layout()
-    plt.savefig("model_optimization.png", dpi=120)
-    plt.close()
-    print(f"Графік збережено: {os.path.abspath('model_optimization.png')}")
-
-    return best["degree"]
+def MNK_Extrapol(S0: np.ndarray, koef: int) -> np.ndarray:
+    Yout = mnk_extrapol(S0, koef, degree=2)
+    n = len(S0)
+    _, C = mnk_poly(S0, degree=2)
+    print(f"МНК-прогноз: y(t) = {C[0, 0]:.4f} + {C[1, 0]:.6f}*t + {C[2, 0]:.8f}*t^2")
+    return Yout
