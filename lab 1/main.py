@@ -63,14 +63,7 @@ def save_to_csv(df: pd.DataFrame, filename: str = "gold_prices.csv") -> None:
     print(f"Рядків: {len(df)}")
 
 
-# ============================================================
-# 3. ОЦІНКА ДИНАМІКИ ТРЕНДУ
-# ============================================================
-
 def plot_trend(prices: np.ndarray, Yout: np.ndarray, title: str, filename: str) -> None:
-    """
-    Візуалізація реальних даних та лінії МНК-тренду.
-    """
     plt.figure(figsize=(12, 5))
     plt.plot(prices, color="steelblue", linewidth=1, label="Реальні ціни GLD")
     plt.plot(Yout[:, 0], color="crimson", linewidth=2, linestyle="--", label="МНК-тренд (квадратична модель)")
@@ -81,7 +74,7 @@ def plot_trend(prices: np.ndarray, Yout: np.ndarray, title: str, filename: str) 
     plt.tight_layout()
     plt.savefig(filename, dpi=120)
     plt.close()
-    print(f"   Графік збережено: {os.path.abspath(filename)}")
+    print(f"Графік збережено: {os.path.abspath(filename)}")
 
 
 def analyze_trend(prices: np.ndarray) -> None:
@@ -95,8 +88,6 @@ def analyze_trend(prices: np.ndarray) -> None:
     print(f"Остання ціна: {prices[-1]:.2f} USD")
     print(f"Загальна зміна: {total_change:+.2f} USD ({pct_change:+.2f}%)")
     slope = MNK_AV_Detect(prices)
-    direction = "↑" if slope > 0 else "↓"
-    print(f"Нахил МНК-моделі: {slope:.6f}({direction})")
 
 
 def stat_characteristics(prices: np.ndarray, label: str) -> dict:
@@ -225,10 +216,6 @@ def sliding_window_clean(S0: np.ndarray, n_wind: int) -> np.ndarray:
     return S_clean
 
 
-# ============================================================
-# 5. СИНТЕЗ МОДЕЛІ (МНК) ТА ВЕРИФІКАЦІЯ
-# ============================================================
-
 def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     print("=" * 60)
     print("5. Синтез та верифікація моделі даних")
@@ -239,12 +226,10 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
 
     prices_clean = sliding_window_clean(prices, n_wind)
 
-    # --- МНК-згладжування реальних даних ---
     print("\n   --- МНК-згладжування ---")
     Yout_smooth = MNK(prices_clean)
     R2_smooth = r2_score_mnk(prices_clean, Yout_smooth, "МНК-згладжування")
 
-    # --- МНК-прогнозування ---
     print("\n   --- МНК-прогнозування ---")
     Yout_extrapol = MNK_Extrapol(prices_clean, koef)
     R2_extrapol = r2_score_mnk(prices_clean, Yout_extrapol[:n], "МНК-прогнозування")
@@ -254,11 +239,11 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
                           for i in range(n)])
 
     # --- верифікація: порівняння стат. характеристик синтетичних і реальних залишків ---
-    print("\n   --- ВЕРИФІКАЦІЯ: порівняння стат. характеристик ---")
+    print("\n   --- Верифікація: порівняння стат. характеристик ---")
     Yout_synth = MNK(synthetic)
     synth_resid = np.array([synthetic[i] - Yout_synth[i, 0] for i in range(n)])
-    print(f"   Реальні дані  → mean={stats['mean']:.4f}, σ={stats['std']:.4f}")
-    print(f"   Синт. модель  → mean={np.mean(synth_resid):.4f}, σ={np.std(synth_resid):.4f}")
+    print(f"Реальні дані: mean={stats['mean']:.4f}, σ={stats['std']:.4f}")
+    print(f"Синт. модель: mean={np.mean(synth_resid):.4f}, σ={np.std(synth_resid):.4f}")
     R2_synth = r2_score_mnk(synthetic, Yout_synth, "синтетична МНК-модель")
 
     # --- графік МНК-тренду та прогнозу ---
@@ -276,9 +261,9 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     plt.tight_layout()
     plt.savefig("mnk_trend_forecast.png", dpi=120)
     plt.close()
-    print(f"   Графік збережено: {os.path.abspath('mnk_trend_forecast.png')}")
+    print(f"Графік збережено: {os.path.abspath('mnk_trend_forecast.png')}")
 
-    # --- порівняльний графік: реальні vs синтетичні дані ---
+    # --- порівняльний графік
     plt.figure(figsize=(13, 5))
     plt.plot(prices_clean, color="steelblue", linewidth=1, alpha=0.8, label="Реальні дані GLD")
     plt.plot(synthetic, color="green", linewidth=1, alpha=0.6, linestyle="--", label="Синтетична модель")
@@ -290,12 +275,7 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     plt.tight_layout()
     plt.savefig("verification_real_vs_synthetic.png", dpi=120)
     plt.close()
-    print(f"   Графік збережено: {os.path.abspath('verification_real_vs_synthetic.png')}")
-
-
-# ============================================================ прибрати потім
-# 6. АНАЛІЗ РЕЗУЛЬТАТІВ
-# ============================================================
+    print(f"Графік збережено: {os.path.abspath('verification_real_vs_synthetic.png')}")
 
 def print_analysis_summary(prices: np.ndarray, stats: dict) -> None:
     """
