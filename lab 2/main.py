@@ -5,8 +5,9 @@ import math as mt
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from bs4 import BeautifulSoup
-import os
+import os, random, warnings
+warnings.filterwarnings("ignore")
+
 
 def parse_gold_prices() -> pd.DataFrame:
     """
@@ -131,47 +132,23 @@ def stat_characteristics(prices: np.ndarray, label: str) -> dict:
             "skew": skew, "kurt": kurt, "min": prices.min(), "max": prices.max()}
 
 
-def MNK_Stat_characteristics(S0: np.ndarray) -> np.ndarray:
+
+
+def mnk_extrapol_poly(S0: np.ndarray, koef: int, degree: int = 2) -> np.ndarray:
+    """МНК прогноз на koef точок вперед."""
     n = len(S0)
-    Yin = np.zeros((n, 1))
-    F = np.ones((n, 3))
-    for i in range(n):
-        Yin[i, 0] = float(S0[i])
-        F[i, 1] = float(i)
-        F[i, 2] = float(i * i)
+    F = np.zeros((n, degree + 1))
+    for d in range(degree + 1):
+        F[:, d] = np.arange(n) ** d
+    Yin = S0.reshape(-1, 1)
     FT = F.T
-    C = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
-    Yout = F.dot(C)
+    C = np.linalg.inv(FT @ F) @ FT @ Yin
+    n_full = n + koef
+    F_full = np.zeros((n_full, degree + 1))
+    for d in range(degree + 1):
+        F_full[:, d] = np.arange(n_full) ** d
+    Yout = F_full @ C
     return Yout
-
-
-def MNK(S0: np.ndarray) -> np.ndarray:
-    n = len(S0)
-    Yin = np.zeros((n, 1))
-    F = np.ones((n, 3))
-    for i in range(n):
-        Yin[i, 0] = float(S0[i])
-        F[i, 1] = float(i)
-        F[i, 2] = float(i * i)
-    FT = F.T
-    C = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
-    Yout = F.dot(C)
-    print(f"Регресійна МНК-модель:")
-    print(f"y(t) = {C[0,0]:.6f}  +  {C[1,0]:.6f} * t  +  {C[2,0]:.8f} * t^2")
-    return Yout
-
-
-def MNK_AV_Detect(S0: np.ndarray) -> float:
-    n = len(S0)
-    Yin = np.zeros((n, 1))
-    F = np.ones((n, 3))
-    for i in range(n):
-        Yin[i, 0] = float(S0[i])
-        F[i, 1] = float(i)
-        F[i, 2] = float(i * i)
-    FT = F.T
-    C = np.linalg.inv(FT.dot(F)).dot(FT).dot(Yin)
-    return float(C[1, 0])
 
 
 def MNK_Extrapol(S0: np.ndarray, koef: int) -> np.ndarray:
