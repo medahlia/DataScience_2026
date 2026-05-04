@@ -5,8 +5,8 @@ import math as mt
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from bs4 import BeautifulSoup
 import os
+
 
 def parse_gold_prices() -> pd.DataFrame:
     """
@@ -246,7 +246,7 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     print(f"Синт. модель: mean={np.mean(synth_resid):.4f}, σ={np.std(synth_resid):.4f}")
     R2_synth = r2_score_mnk(synthetic, Yout_synth, "синтетична МНК-модель")
 
-    # --- графік МНК-тренду та прогнозу ---
+    #графік МНК-тренду та прогнозу
     plt.figure(figsize=(13, 5))
     x_hist = np.arange(n)
     x_full = np.arange(n + koef)
@@ -263,7 +263,7 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     plt.close()
     print(f"Графік збережено: {os.path.abspath('mnk_trend_forecast.png')}")
 
-    # --- порівняльний графік
+    #порівняльний графік
     plt.figure(figsize=(13, 5))
     plt.plot(prices_clean, color="steelblue", linewidth=1, alpha=0.8, label="Реальні дані GLD")
     plt.plot(synthetic, color="green", linewidth=1, alpha=0.6, linestyle="--", label="Синтетична модель")
@@ -277,66 +277,20 @@ def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     plt.close()
     print(f"Графік збережено: {os.path.abspath('verification_real_vs_synthetic.png')}")
 
-def print_analysis_summary(prices: np.ndarray, stats: dict) -> None:
-    """
-    Висновки та аналіз отриманих результатів.
-    """
-    print("=" * 60)
-    print("6. АНАЛІЗ РЕЗУЛЬТАТІВ")
-    slope = MNK_AV_Detect(prices)
-    direction = "зростаючий" if slope > 0 else "спадаючий"
-    print(f"""
-   ✔ Парсинг сайту stockanalysis.com/etf/gld/history успішно виконано.
-     Отримано {len(prices)} записів цін закриття ETF GLD.
-
-   ✔ Динаміка тренду:
-     Тренд {direction}. Нахил МНК-моделі = {slope:.6f}.
-     Ціна зросла з {prices[0]:.2f} до {prices[-1]:.2f} USD
-     (+{((prices[-1]-prices[0])/prices[0]*100):.1f}% за весь період).
-
-   ✔ Статистичні характеристики залишків відносно тренду:
-     Математичне сподівання ≈ {stats['mean']:.4f} (близько до 0 → модель адекватна)
-     СКВ (σ) = {stats['std']:.4f} USD  –  характеризує розкид відносно тренду
-     Асиметрія = {stats['skew']:.4f}  |  Ексцес = {stats['kurt']:.4f}
-
-   ✔ МНК-модель (квадратична регресія):
-     Коефіцієнт детермінації R² близький до 1 → висока якість апроксимації.
-     Метод найменших квадратів (МНК) надійно відтворює глобальний тренд.
-
-   ✔ Синтетична модель:
-     Побудована як: y_synth = МНК-тренд + N(mean, σ).
-     Статистичні характеристики синтетичних даних близькі до реальних,
-     що підтверджує адекватність синтезованої моделі.
-    """)
-
-
-# ============================================================
-# ГОЛОВНИЙ БЛОК
-# ============================================================
 
 if __name__ == "__main__":
 
-    # 1. Парсинг
     df_raw = parse_gold_prices()
     df_clean = clean_dataframe(df_raw)
 
-    # 2. Збереження у CSV
     save_to_csv(df_clean, "gold_prices.csv")
 
     prices = df_clean["Close"].values.astype(float)
 
-    # 3. Оцінка динаміки тренду
     analyze_trend(prices)
     Yout_trend = MNK_Stat_characteristics(prices)
     plot_trend(prices, Yout_trend, "Динаміка цін ETF GLD та МНК-тренд", "trend_analysis.png")
 
-    # 4. Статистичні характеристики
     stats = stat_characteristics(prices, "ETF GLD (ціна закриття)")
 
-    # 5. Синтез та верифікація МНК-моделі
     synthesize_and_verify(prices, stats)
-
-    # 6. Аналіз результатів
-    print_analysis_summary(prices, stats)
-
-    print("=" * 60)
