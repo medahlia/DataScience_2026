@@ -18,79 +18,138 @@ import matplotlib.patches as mpatches
 
 # ───────────────────────────── 1. Завантаження даних ─────────────────────────────
 
-FILE_NAME = "Pr1_new.xlsx"
 
-def load_data(file_name: str):
-    """
-    Читає аркуш 'Дані' (рядки 3…12 — рядок 1 заголовки, рядок 2 — тип критерію).
-    Повертає: DataFrame з даними, список назв товарів, матрицю критеріїв (numpy).
-    """
-    df = pd.read_excel(file_name, sheet_name="Дані", header=0)
-    # рядок 0 — заголовки (вже прочитані як header), рядок 1 (iloc[0]) — тип критерію
-    df_data = df.iloc[1:].reset_index(drop=True)  # пропустити рядок "тип"
-    products = df_data.iloc[:, 0].tolist()
-    criteria_matrix = df_data.iloc[:, 1:].astype(float).values  # shape (10, 10)
-    criteria_names = df.columns[1:].tolist()
-    return products, criteria_names, criteria_matrix
+def file_parsing(Data_name, sample_data):
+    for name, values in sample_data[[Data_name]].items():
+        values
+    n_sample_data = int(len(values))
+    S_real = np.zeros((n_sample_data))
+    for i in range(n_sample_data):
+        S_real[i] = float(values[i])
+    return S_real
 
+
+def matrix_generation(File_name):
+    sample_data = pd.read_excel(File_name, header=None)
+    print(sample_data)
+
+    # рядок 0 - заголовки товарів, стовпець 0 - назви критеріїв, стовпець 11 - тип (мін/макс)
+    # дані: рядки 1..10, стовпці 1..10
+    data_block = sample_data.iloc[1:, 1:11].reset_index(drop=True)
+    data_block.columns = range(10)
+
+    n_criteria = data_block.shape[0]  # 10 критеріїв
+    n_товарів = data_block.shape[1]  # 10 товарів
+
+    line_column_matrix = np.zeros((n_criteria, n_товарів))
+    for i in range(n_criteria):
+        for j in range(n_товарів):
+            line_column_matrix[i, j] = float(data_block.iloc[i, j])
+
+    return line_column_matrix
+
+
+def matrix_adapter(line_column_matrix, line):
+    column_sample_matrix = np.shape(line_column_matrix)
+    line_matrix = np.zeros((column_sample_matrix[1]))
+    for j in range(column_sample_matrix[1]):
+        line_matrix[j] = line_column_matrix[line, j]
+    return line_matrix
 
 # ───────────────────────── 2. Нормалізація та інтегрована оцінка ─────────────────
 
-def voronin_score(
-    matrix: np.ndarray,
-    maximize_idx: list[int],
-    weights: np.ndarray,
-) -> np.ndarray:
-    """
-    Розраховує інтегровану оцінку Вороніна для кожного товару (стовпця).
+def Voronin(File_name, G1, G2, G3, G4, G5, G6, G7, G8, G9, G10):
 
-    Параметри
-    ---------
-    matrix       : (n_criteria × n_alternatives) — значення критеріїв
-    maximize_idx : індекси рядків, які МАКСИМІЗУЮТЬСЯ
-    weights      : вектор вагових коефіцієнтів (len = n_criteria)
+    line_column_matrix = matrix_generation(File_name)
+    column_matrix = np.shape(line_column_matrix)
+    Integro = np.zeros((column_matrix[1]))
 
-    Повертає вектор Integro (n_alternatives,) — менше = краще.
-    """
-    n_crit, n_alt = matrix.shape
-    norm_weights = weights / weights.sum()
+    F1 = matrix_adapter(line_column_matrix, 0)
+    F2 = matrix_adapter(line_column_matrix, 1)
+    F3 = matrix_adapter(line_column_matrix, 2)
+    F4 = matrix_adapter(line_column_matrix, 3)
+    F5 = matrix_adapter(line_column_matrix, 4)
+    F6 = matrix_adapter(line_column_matrix, 5)
+    F7 = matrix_adapter(line_column_matrix, 6)
+    F8 = matrix_adapter(line_column_matrix, 7)
+    F9 = matrix_adapter(line_column_matrix, 8)
+    F10 = matrix_adapter(line_column_matrix, 9)
 
-    normalized = np.zeros_like(matrix, dtype=float)
-    for i in range(n_crit):
-        row = matrix[i].copy()
-        if i in maximize_idx:
-            # максимізований критерій → інвертуємо для нормування
-            col_sum = np.sum(1.0 / row)
-            normalized[i] = (1.0 / row) / col_sum
-        else:
-            col_sum = np.sum(row)
-            normalized[i] = row / col_sum
+    F10n = np.zeros((column_matrix[1]))
+    F20n = np.zeros((column_matrix[1]))
+    F30n = np.zeros((column_matrix[1]))
+    F40n = np.zeros((column_matrix[1]))
+    F50n = np.zeros((column_matrix[1]))
+    F60n = np.zeros((column_matrix[1]))
+    F70n = np.zeros((column_matrix[1]))
+    F80n = np.zeros((column_matrix[1]))
+    F90n = np.zeros((column_matrix[1]))
+    F100n = np.zeros((column_matrix[1]))
 
-    # Нелінійна схема компромісів: Integro_j = Σ [ g_i * (1 - f_ij)^(-1) ]
-    integro = np.zeros(n_alt)
-    for j in range(n_alt):
-        score = 0.0
-        for i in range(n_crit):
-            f_ij = normalized[i, j]
-            # Захист від f_ij >= 1 (теоретично неможливо при >1 альтернативи)
-            if f_ij >= 1.0:
-                f_ij = 0.999
-            score += norm_weights[i] * (1.0 - f_ij) ** (-1)
-        integro[j] = score
-    return integro
+    GNorm = G1 + G2 + G3 + G4 + G5 + G6 + G7 + G8 + G9 + G10
+    G10n = G1 / GNorm
+    G20n = G2 / GNorm
+    G30n = G3 / GNorm
+    G40n = G4 / GNorm
+    G50n = G5 / GNorm
+    G60n = G6 / GNorm
+    G70n = G7 / GNorm
+    G80n = G8 / GNorm
+    G90n = G9 / GNorm
+    G100n = G10 / GNorm
 
+    sum_F1 = sum_F2 = sum_F3 = sum_F4 = sum_F5 = 0
+    sum_F6 = sum_F7 = sum_F8 = sum_F9 = sum_F10 = 0
+
+    for i in range(column_matrix[1]):
+        sum_F1 += F1[i]
+        sum_F2 += F2[i]
+        sum_F3 += F3[i]
+        sum_F4 += F4[i]
+        sum_F5 += F5[i]
+        sum_F6 += F6[i]
+        sum_F7 += F7[i]
+        sum_F8 += F8[i]
+        sum_F9 += (1 / F9[i])
+        sum_F10 += (1 / F10[i])
+
+    for i in range(column_matrix[1]):
+        F10n[i] = F1[i] / sum_F1
+        F20n[i] = F2[i] / sum_F2
+        F30n[i] = F3[i] / sum_F3
+        F40n[i] = F4[i] / sum_F4
+        F50n[i] = F5[i] / sum_F5
+        F60n[i] = F6[i] / sum_F6
+        F70n[i] = F7[i] / sum_F7
+        F80n[i] = F8[i] / sum_F8
+        F90n[i] = (1 / F9[i]) / sum_F9
+        F100n[i] = (1 / F10[i]) / sum_F10
+
+        Integro[i] = (G10n * (1 - F10n[i]) ** (-1)) \
+                   + (G20n * (1 - F20n[i]) ** (-1)) \
+                   + (G30n * (1 - F30n[i]) ** (-1)) \
+                   + (G40n * (1 - F40n[i]) ** (-1)) \
+                   + (G50n * (1 - F50n[i]) ** (-1)) \
+                   + (G60n * (1 - F60n[i]) ** (-1)) \
+                   + (G70n * (1 - F70n[i]) ** (-1)) \
+                   + (G80n * (1 - F80n[i]) ** (-1)) \
+                   + (G90n * (1 - F90n[i]) ** (-1)) \
+                   + (G100n * (1 - F100n[i]) ** (-1))
+
+    min_val = 10000
+    opt = 0
+    for i in range(column_matrix[1]):
+        if min_val > Integro[i]:
+            min_val = Integro[i]
+            opt = i
+
+    print('Інтегрована оцінка (scor):')
+    print(Integro)
+    print('Номер_оптимального_товару:', opt + 1)
+
+    return Integro  # ✅ ОЦЕ ДОДАЛИ
 
 # ────────────────────────────── 3. Аналіз та виведення ───────────────────────────
-
-def rank_alternatives(integro: np.ndarray, products: list[str]) -> pd.DataFrame:
-    """Повертає таблицю рейтингу — відсортовану за зростанням Integro."""
-    df = pd.DataFrame({
-        "Товар":       products,
-        "Integro":     np.round(integro, 4),
-        "Ранг":        pd.Series(integro).rank(method="min").astype(int),
-    }).sort_values("Integro").reset_index(drop=True)
-    df.index = df.index + 1
-    return df
 
 
 def print_report(products, criteria_names, matrix, maximize_idx,
@@ -130,91 +189,73 @@ def print_report(products, criteria_names, matrix, maximize_idx,
 
 # ──────────────────────────────── 4. Візуалізація ────────────────────────────────
 
-def plot_results(products, integro, criteria_names, matrix, maximize_idx):
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    fig.suptitle("DSS — Оцінювання ефективності впровадження нового товару\n"
-                 "(тип товару: смартфони)", fontsize=13, fontweight="bold")
+def plot_results(products, criteria_names, matrix, maximize_idx):
 
-    # --- графік 1: стовпчаста діаграма Integro ---
-    ax1 = axes[0]
-    colors = ["#2ecc71" if v == integro.min() else
-              "#e74c3c" if v == integro.max() else "#3498db"
-              for v in integro]
-    bars = ax1.bar(range(len(products)), integro, color=colors, edgecolor="white", linewidth=0.8)
-    ax1.set_xticks(range(len(products)))
-    ax1.set_xticklabels([p.replace(" ", "\n") for p in products], fontsize=7.5)
-    ax1.set_ylabel("Integro (менше = краще)", fontsize=10)
-    ax1.set_title("Інтегрована оцінка Вороніна", fontsize=11)
-    ax1.axhline(integro.min(), color="#2ecc71", linestyle="--", linewidth=1.2, alpha=0.7)
-    for bar, val in zip(bars, integro):
-        ax1.text(bar.get_x() + bar.get_width() / 2,
-                 bar.get_height() + 0.05,
-                 f"{val:.2f}", ha="center", va="bottom", fontsize=7.5)
-    green_patch = mpatches.Patch(color="#2ecc71", label="Оптимальний")
-    red_patch   = mpatches.Patch(color="#e74c3c", label="Найгірший")
-    blue_patch  = mpatches.Patch(color="#3498db", label="Інші")
-    ax1.legend(handles=[green_patch, blue_patch, red_patch], fontsize=8)
+    plt.figure(figsize=(10, 6))
+    plt.title("DSS — Теплова карта критеріїв (смартфони)", fontsize=12, fontweight="bold")
 
-    # --- графік 2: нормалізована теплова карта критеріїв ---
-    ax2 = axes[1]
-    # нормалізація для візуалізації (0..1, де 0=добре)
+    # нормалізація (0..1, де 0 = добре)
     norm_vis = np.zeros_like(matrix, dtype=float)
+
     for i in range(matrix.shape[0]):
         mn, mx = matrix[i].min(), matrix[i].max()
+
         if mx == mn:
             norm_vis[i] = 0.5
         elif i in maximize_idx:
-            norm_vis[i] = (mx - matrix[i]) / (mx - mn)  # інвертуємо
+            norm_vis[i] = (mx - matrix[i]) / (mx - mn)
         else:
             norm_vis[i] = (matrix[i] - mn) / (mx - mn)
 
-    im = ax2.imshow(norm_vis, cmap="RdYlGn_r", aspect="auto", vmin=0, vmax=1)
-    ax2.set_xticks(range(len(products)))
-    ax2.set_xticklabels([p.split()[0] for p in products], rotation=45, ha="right", fontsize=8)
+    im = plt.imshow(norm_vis, cmap="RdYlGn_r", aspect="auto", vmin=0, vmax=1)
+
+    plt.xticks(range(len(products)),
+               [p.split()[0] for p in products],
+               rotation=45)
+
     short_names = [c.split("(")[0].strip() for c in criteria_names]
-    ax2.set_yticks(range(len(criteria_names)))
-    ax2.set_yticklabels(
-        [f"{'↑' if i in maximize_idx else '↓'} {short_names[i]}" for i in range(len(criteria_names))],
-        fontsize=8
-    )
-    ax2.set_title("Теплова карта критеріїв\n(зелений = краще)", fontsize=11)
-    plt.colorbar(im, ax=ax2, label="0=добре  1=погано")
 
+    plt.yticks(range(len(criteria_names)),
+               [f"{'↑' if i in maximize_idx else '↓'} {short_names[i]}"
+                for i in range(len(criteria_names))])
+
+    plt.colorbar(im, label="0 = добре, 1 = погано")
+    plt.savefig("/Users/dasha/dss_results.png", dpi=150, bbox_inches="tight")
     plt.tight_layout()
-    plt.savefig("/home/claude/dss_results.png", dpi=150, bbox_inches="tight")
     plt.show()
-    print("  Графік збережено: dss_results.png")
-
 
 # ──────────────────────────────── ГОЛОВНИЙ БЛОК ──────────────────────────────────
 
 if __name__ == "__main__":
 
-    # ── завантаження даних ──
-    products, criteria_names, raw_matrix = load_data(FILE_NAME)
+    FILE_NAME = "Book1.xlsx"
 
-    # matrix потрібна як (n_criteria × n_alternatives)
-    matrix = raw_matrix.T   # shape (10 criteria, 10 alternatives)
+    products = [f"Товар {i + 1}" for i in range(10)]
 
-    # ── визначення типів критеріїв ──
-    # Індекси рядків (критеріїв) що МАКСИМІЗУЮТЬСЯ:
-    #   8 → "Акумулятор (мАг)"
-    #   9 → "Рейтинг (1-10)"
+    criteria_names = [
+        "Критерій 1", "Критерій 2", "Критерій 3", "Критерій 4",
+        "Критерій 5", "Критерій 6", "Критерій 7",
+        "Критерій 8", "Критерій 9", "Критерій 10"
+    ]
+
+    matrix = matrix_generation(FILE_NAME)
+
     MAXIMIZE_IDX = [8, 9]
 
-    # ── вагові коефіцієнти (рівні за замовчуванням, можна змінити) ──
-    # Формат: [Ціна, Вага, Товщина, Зарядка, Нагрів, Пам'ять ОС, Ремонт, Шум, Акумулятор, Рейтинг]
     weights = np.array([1.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.2, 0.8, 1.2, 1.8])
-    # (Ціна та Рейтинг мають дещо більшу вагу — важливіші для ринку)
 
-    # ── розрахунок інтегрованої оцінки ──
-    integro = voronin_score(matrix, MAXIMIZE_IDX, weights)
+    # ✅ ПРАВИЛЬНИЙ виклик
+    integro = Voronin(FILE_NAME,
+                      weights[0], weights[1], weights[2], weights[3], weights[4],
+                      weights[5], weights[6], weights[7], weights[8], weights[9])
 
-    # ── рейтинг ──
-    ranking_df = rank_alternatives(integro, products)
+    ranking_df = pd.DataFrame({
+        "Product": products,
+        "Integro": integro
+    }).sort_values(by="Integro")
 
-    # ── звіт ──
-    print_report(products, criteria_names, matrix, MAXIMIZE_IDX, integro, ranking_df)
+    print_report(products, criteria_names, matrix,
+                 MAXIMIZE_IDX, integro, ranking_df)
 
-    # ── візуалізація ──
-    plot_results(products, integro, criteria_names, matrix, MAXIMIZE_IDX)
+    # ✅ ПРАВИЛЬНИЙ виклик
+    plot_results(products, criteria_names, matrix, MAXIMIZE_IDX)
