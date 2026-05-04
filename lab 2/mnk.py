@@ -96,8 +96,22 @@ def MNK_AV_Detect(S0: np.ndarray) -> float:
 
 
 #???????????/////
-def mnk_extrapol(S0, koef, degree):
-    pass
+def mnk_extrapol(S0: np.ndarray, koef: int, degree: int = 2) -> np.ndarray:
+    n = len(S0)
+
+    # отримуємо коефіцієнти
+    _, C = mnk_poly(S0, degree)
+
+    total = n + koef
+    Yout = np.zeros((total, 1))
+
+    for i in range(total):
+        val = 0.0
+        for d in range(degree + 1):
+            val += C[d, 0] * (i ** d)
+        Yout[i, 0] = val
+
+    return Yout
 
 
 def MNK_Extrapol(S0: np.ndarray, koef: int) -> np.ndarray:
