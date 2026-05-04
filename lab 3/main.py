@@ -1,22 +1,6 @@
-# ========================= Decision Support System (DSS) =========================
-"""
-Завдання: Оцінювання ефективності впровадження нового товару на ринок
-         засобами багатокритеріальної оптимізації (метод Вороніна).
-
-Тип товару : Смартфони (10 моделей)
-Критерії   : 10 показників — 8 мінімізованих, 2 максимізованих
-Метод      : Нелінійна схема компромісів (Voronin Integrated Score)
-             http://sci-gems.math.bas.bg/jspui/bitstream/10525/49/1/ijita15-2-p02.pdf
-
-Вхідні дані: файл Pr1_new.xlsx
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-
-# ───────────────────────────── 1. Завантаження даних ─────────────────────────────
 
 
 def file_parsing(Data_name, sample_data):
@@ -33,17 +17,15 @@ def matrix_generation(File_name):
     sample_data = pd.read_excel(File_name, header=None)
     print(sample_data)
 
-    # рядок 0 - заголовки товарів, стовпець 0 - назви критеріїв, стовпець 11 - тип (мін/макс)
-    # дані: рядки 1..10, стовпці 1..10
     data_block = sample_data.iloc[1:, 1:11].reset_index(drop=True)
     data_block.columns = range(10)
 
-    n_criteria = data_block.shape[0]  # 10 критеріїв
-    n_товарів = data_block.shape[1]  # 10 товарів
+    n_criteria = data_block.shape[0]
+    n_items = data_block.shape[1]
 
-    line_column_matrix = np.zeros((n_criteria, n_товарів))
+    line_column_matrix = np.zeros((n_criteria, n_items))
     for i in range(n_criteria):
-        for j in range(n_товарів):
+        for j in range(n_items):
             line_column_matrix[i, j] = float(data_block.iloc[i, j])
 
     return line_column_matrix
@@ -56,9 +38,10 @@ def matrix_adapter(line_column_matrix, line):
         line_matrix[j] = line_column_matrix[line, j]
     return line_matrix
 
-# ───────────────────────── 2. Нормалізація та інтегрована оцінка ─────────────────
 
-def Voronin(File_name, G1, G2, G3, G4, G5, G6, G7, G8, G9, G10):
+def Voronin(File_name, G1, G2, G3,
+            G4, G5, G6, G7,
+            G8, G9, G10):
 
     line_column_matrix = matrix_generation(File_name)
     column_matrix = np.shape(line_column_matrix)
@@ -147,9 +130,7 @@ def Voronin(File_name, G1, G2, G3, G4, G5, G6, G7, G8, G9, G10):
     print(Integro)
     print('Номер_оптимального_товару:', opt + 1)
 
-    return Integro  # ✅ ОЦЕ ДОДАЛИ
-
-# ────────────────────────────── 3. Аналіз та виведення ───────────────────────────
+    return Integro
 
 
 def print_report(products, criteria_names, matrix, maximize_idx,
@@ -158,10 +139,10 @@ def print_report(products, criteria_names, matrix, maximize_idx,
     sep = "─" * 70
 
     print("\n" + sep)
-    print("  DSS — ОЦІНЮВАННЯ ЕФЕКТИВНОСТІ ВПРОВАДЖЕННЯ НОВОГО ТОВАРУ")
+    print("DSS — ОЦІНЮВАННЯ ЕФЕКТИВНОСТІ ВПРОВАДЖЕННЯ НОВОГО ТОВАРУ")
     print(sep)
 
-    print("\n📋  ВХІДНА МАТРИЦЯ КРИТЕРІЇВ\n")
+    print("\nВХІДНА МАТРИЦЯ КРИТЕРІЇВ\n")
     header = f"{'Критерій':<28}" + "".join(f"{p[:10]:>11}" for p in products)
     print(header)
     print("─" * len(header))
@@ -171,28 +152,26 @@ def print_report(products, criteria_names, matrix, maximize_idx,
         print(row_str)
 
     print(f"\n{sep}")
-    print("  ІНТЕГРОВАНА ОЦІНКА (метод Вороніна) — менше = краще")
+    print("ІНТЕГРОВАНА ОЦІНКА (метод Вороніна) — менше = краще")
     print(sep)
     for j, p in enumerate(products):
         marker = " ◄ ОПТИМАЛЬНИЙ" if integro[j] == integro.min() else ""
         print(f"  {p:<22}  Integro = {integro[j]:8.4f}{marker}")
 
     print(f"\n{sep}")
-    print("  РЕЙТИНГ АЛЬТЕРНАТИВ")
+    print("РЕЙТИНГ АЛЬТЕРНАТИВ")
     print(sep)
     print(ranking_df.to_string())
 
     best_idx = int(np.argmin(integro))
-    print(f"\n✅  РЕКОМЕНДАЦІЯ: впровадити товар  «{products[best_idx]}»")
-    print(f"    Integro = {integro[best_idx]:.4f}  (мінімальна інтегрована оцінка)\n")
+    print(f"\nРЕКОМЕНДАЦІЯ: впровадити товар  «{products[best_idx]}»")
+    print(f"Integro = {integro[best_idx]:.4f}  (мінімальна інтегрована оцінка)\n")
 
-
-# ──────────────────────────────── 4. Візуалізація ────────────────────────────────
 
 def plot_results(products, criteria_names, matrix, maximize_idx):
 
     plt.figure(figsize=(10, 6))
-    plt.title("DSS — Теплова карта критеріїв (смартфони)", fontsize=12, fontweight="bold")
+    plt.title("DSS — Теплова карта критеріїв", fontsize=12, fontweight="bold")
 
     # нормалізація (0..1, де 0 = добре)
     norm_vis = np.zeros_like(matrix, dtype=float)
@@ -224,13 +203,12 @@ def plot_results(products, criteria_names, matrix, maximize_idx):
     plt.tight_layout()
     plt.show()
 
-# ──────────────────────────────── ГОЛОВНИЙ БЛОК ──────────────────────────────────
 
 if __name__ == "__main__":
 
     FILE_NAME = "Book1.xlsx"
 
-    products = [f"Товар {i + 1}" for i in range(10)]
+    products = [f"Товар{i + 1}" for i in range(10)]
 
     criteria_names = [
         "Критерій 1", "Критерій 2", "Критерій 3", "Критерій 4",
@@ -244,7 +222,6 @@ if __name__ == "__main__":
 
     weights = np.array([1.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.2, 0.8, 1.2, 1.8])
 
-    # ✅ ПРАВИЛЬНИЙ виклик
     integro = Voronin(FILE_NAME,
                       weights[0], weights[1], weights[2], weights[3], weights[4],
                       weights[5], weights[6], weights[7], weights[8], weights[9])
@@ -257,5 +234,4 @@ if __name__ == "__main__":
     print_report(products, criteria_names, matrix,
                  MAXIMIZE_IDX, integro, ranking_df)
 
-    # ✅ ПРАВИЛЬНИЙ виклик
     plot_results(products, criteria_names, matrix, MAXIMIZE_IDX)
