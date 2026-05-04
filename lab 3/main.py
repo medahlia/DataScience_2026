@@ -199,7 +199,6 @@ def plot_results(products, criteria_names, matrix, maximize_idx):
                 for i in range(len(criteria_names))])
 
     plt.colorbar(im, label="0 = добре, 1 = погано")
-    plt.savefig("/Users/dasha/dss_results.png", dpi=150, bbox_inches="tight")
     plt.tight_layout()
     plt.show()
 
