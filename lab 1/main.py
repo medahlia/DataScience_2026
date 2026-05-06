@@ -21,7 +21,7 @@ def parse_gold_prices() -> pd.DataFrame:
     headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 
     print("=" * 60)
-    print("1. Парсинг сайту")
+    print("- Парсинг сайту")
     print(f"Тікер: {ticker}")
     print(f"Джерело: https://finance.yahoo.com/quote/GLD/")
 
@@ -58,7 +58,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 def save_to_csv(df: pd.DataFrame, filename: str = "gold_prices.csv") -> None:
     df.to_csv(filename, index=False, encoding="utf-8-sig")
     print("=" * 60)
-    print("2. Збереження даних")
+    print("- Збереження даних")
     print(f"Файл збережено: {os.path.abspath(filename)}")
     print(f"Рядків: {len(df)}")
 
@@ -79,7 +79,7 @@ def plot_trend(prices: np.ndarray, Yout: np.ndarray, title: str, filename: str) 
 
 def analyze_trend(prices: np.ndarray) -> None:
     print("=" * 60)
-    print("3. Оцінка динаміки тренду")
+    print("- Оцінка динаміки тренду")
     total_change = prices[-1] - prices[0]
     pct_change = (total_change / prices[0]) * 100
     n = len(prices)
@@ -102,7 +102,7 @@ def stat_characteristics(prices: np.ndarray, label: str) -> dict:
     kurt = float(pd.Series(residuals).kurt())
 
     print("=" * 60)
-    print(f"4. Статистичні характеристики: {label}")
+    print(f"- Статистичні характеристики: {label}")
     print(f"Кількість елементів вибірки: {len(prices)}")
     print(f"Математичне сподівання (mean): {m_mean:.4f}")
     print(f"Медіана залишків: {m_median:.4f}")
@@ -218,7 +218,7 @@ def sliding_window_clean(S0: np.ndarray, n_wind: int) -> np.ndarray:
 
 def synthesize_and_verify(prices: np.ndarray, stats: dict) -> None:
     print("=" * 60)
-    print("5. Синтез та верифікація моделі даних")
+    print("- Синтез та верифікація моделі даних")
 
     n = len(prices)
     n_wind = 5
