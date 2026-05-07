@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import pylab
 
 
 def file_parsing(Data_name, sample_data):
@@ -147,7 +148,7 @@ def print_report(products, criteria_names, matrix, maximize_idx,
     print(header)
     print("─" * len(header))
     for i, cname in enumerate(criteria_names):
-        tag = "↑макс" if i in maximize_idx else "↓мін "
+        tag = "макс" if i in maximize_idx else "мін "
         row_str = f"{cname[:26]:<26} {tag}" + "".join(f"{matrix[i, j]:>11.1f}" for j in range(n_alt))
         print(row_str)
 
@@ -203,6 +204,56 @@ def plot_results(products, criteria_names, matrix, maximize_idx):
     plt.show()
 
 
+def OLAP_cube(line_column_matrix, integro):
+    """
+    OLAP-куб: 3D-візуалізація нормалізованих критеріїв та інтегрованої оцінки
+    (з лекції multi_criteria_OLAP.py).
+    """
+    column_matrix = np.shape(line_column_matrix)
+
+    # нормалізація критеріїв (аналогічно Voronin, з лекції)
+    Fn = []
+    for row in range(column_matrix[0]):
+        Fi = matrix_adapter(line_column_matrix, row)
+        # критерії 9 і 10 (індекси 8, 9) — максимізовані: нормалізуємо через 1/Fi
+        if row in [8, 9]:
+            s = sum(1 / Fi[i] for i in range(column_matrix[1]))
+            Fn.append(np.array([(1 / Fi[i]) / s for i in range(column_matrix[1])]))
+        else:
+            s = sum(Fi)
+            Fn.append(Fi / s)
+
+    xg = np.arange(column_matrix[1], dtype=float)
+
+    clr = ['#4bb2c5', '#c5b47f', '#EAA228', '#579575', '#839557',
+           '#958c12', '#953579', '#4b5de4', '#4bb2c5', '#c5473a']
+
+    fig = pylab.figure(figsize=(12, 7))
+    ax = fig.add_subplot(projection='3d')
+
+    # 10 критеріїв + інтегрована оцінка (як у лекції)
+    for row in range(column_matrix[0]):
+        ax.bar(xg, Fn[row], zs=row + 1, zdir='y', color=clr, alpha=0.7)
+
+    # інтегрована оцінка на останній площині
+    integro_norm = integro / integro.sum()
+    ax.bar(xg, integro_norm, zs=column_matrix[0] + 1, zdir='y',
+           color='#c5473a', alpha=0.9)
+
+    ax.set_xlabel('Товари')
+    ax.set_ylabel('Критерії (1–10) + Integro')
+    ax.set_zlabel('Нормалізоване значення')
+    ax.set_title('OLAP-куб: багатокритеріальна оцінка товарів', fontsize=12)
+
+    ax.set_xticks(xg)
+    ax.set_xticklabels([f"Т{i + 1}" for i in range(column_matrix[1])], fontsize=7)
+
+    pylab.tight_layout()
+    pylab.savefig('olap_cube.png', dpi=120)
+    pylab.show()
+    print("OLAP-куб збережено: olap_cube.png")
+
+
 if __name__ == "__main__":
 
     FILE_NAME = "Book1.xlsx"
@@ -234,3 +285,5 @@ if __name__ == "__main__":
                  MAXIMIZE_IDX, integro, ranking_df)
 
     plot_results(products, criteria_names, matrix, MAXIMIZE_IDX)
+
+    OLAP_cube(matrix, integro)
