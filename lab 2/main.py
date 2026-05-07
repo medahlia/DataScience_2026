@@ -1,5 +1,4 @@
 # ============================================================
-#   Лабораторна робота №2
 #   ETF SPY (S&P 500) — 2015–2019
 #   Група вимог 1: МНК + прогнозування
 #   Група вимог 2: α-β фільтр
@@ -10,7 +9,6 @@ import pandas as pd
 import numpy as np
 import math as mt
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
@@ -22,15 +20,12 @@ from anomaly import (Model_NORM_AV, Sliding_Window_AV_Detect_medium,
                      Sliding_Window_AV_Detect_sliding_wind)
 from abf import ABF
 
-# ============================================================
-# ПАРСИНГ (аналогічно Лр_1, тільки тікер SPY)
-# ============================================================
 
 def parse_spy_prices() -> pd.DataFrame:
     """
     Парсинг цін ETF SPY (S&P 500).
     Джерело: https://finance.yahoo.com/quote/SPY/
-    Той самий часовий проміжок що в Лр_1: 2015–2019.
+    часовий проміжок: 2015–2019.
     """
     ticker = "SPY"
     url = (
@@ -83,7 +78,6 @@ def save_to_csv(df: pd.DataFrame, filename: str = "spy_prices.csv") -> None:
 
 
 # графіки
-
 def plot_trend(prices, Yout, title, filename):
     plt.figure(figsize=(12, 5))
     plt.plot(prices, color="steelblue", linewidth=1, label="Реальні ціни SPY")
@@ -168,13 +162,13 @@ def plot_histogram(prices, title, filename):
 
 if __name__ == "__main__":
 
-    # ── Парсинг та збереження ────────────────────────────────
+    # парсинг та збереження
     df = parse_spy_prices()
     save_to_csv(df, "spy_prices.csv")
     prices = df["Close"].values.astype(float)
     n = len(prices)
 
-    # ── Стат. характеристики вихідної вибірки (Лр_1) ─────────
+    # стат. характеристики вихідної вибірки
     print("=" * 60)
     print("- Оцінка динаміки тренду")
     total_change = prices[-1] - prices[0]
@@ -191,107 +185,97 @@ if __name__ == "__main__":
     Stat_characteristics_in(prices, "Вихідна вибірка SPY (без АВ)")
     plot_histogram(prices, "Гістограма залишків: ETF SPY", "spy_histogram.png")
 
-    # ════════════════════════════════════════════════════════
     # ГРУПА ВИМОГ 1
-    # ════════════════════════════════════════════════════════
+
     print("\n" + "=" * 60)
     print("  ГРУПА ВИМОГ 1")
     print("=" * 60)
 
-    # п.2 — Модель з АВ
+    # п.2 Модель з АВ
     SV_AV_1, _ = Model_NORM_AV(prices, nAV_pct=5, Q_AV=3, seed=42)
-    plot_av(prices, SV_AV_1, "Вр.1 — ETF SPY: вихідні дані + АВ", "vr1_av_model.png")
-    Stat_characteristics_in(SV_AV_1, "Вр.1 — Вибірка з АВ")
+    plot_av(prices, SV_AV_1, "Вр.1 | ETF SPY: вихідні дані + АВ", "vr1_av_model.png")
+    Stat_characteristics_in(SV_AV_1, "Вр.1 | Вибірка з АВ")
 
-    # п.3 — Очищення методом medium (з лекції L_1_3)
+    # п.3 Очищення методом medium (L_1_3)
     print("=" * 60)
-    print("Вр.1 п.3 — Очищення від АВ: метод medium (з лекції L_1_3)")
+    print("Вр.1 | Очищення від АВ: метод medium")
     N_Wind_AV = 5
     Q_medium = 1.6
     S_clean_1 = Sliding_Window_AV_Detect_medium(SV_AV_1.copy(), N_Wind_AV, Q_medium)
-    Stat_characteristics_in(S_clean_1, "Вр.1 — Вибірка очищена від АВ (medium)")
-    plot_av(prices, S_clean_1, "Вр.1 — ETF SPY: після очищення medium", "vr1_cleaned.png")
+    Stat_characteristics_in(S_clean_1, "Вр.1 | Вибірка очищена від АВ (medium)")
+    plot_av(prices, S_clean_1, "Вр.1 | ETF SPY: після очищення medium", "vr1_cleaned.png")
 
-    # п.4 — Показники якості
+    # п.4 Показники якості
     print("=" * 60)
-    print("Вр.1 п.4 — Показники якості моделі після очищення")
+    print("Вр.1 | Показники якості моделі після очищення")
     Yout_clean_1 = MNK(S_clean_1)
-    R2_1 = r2_score(S_clean_1, Yout_clean_1, "Вр.1 МНК після очищення від АВ")
-    Stat_characteristics_out(S_clean_1, Yout_clean_1, "Вр.1 стат. характеристики МНК")
+    R2_1 = r2_score(S_clean_1, Yout_clean_1, "Вр.1 | МНК після очищення від АВ")
+    Stat_characteristics_out(S_clean_1, Yout_clean_1, "Вр.1 | стат. характеристики МНК")
 
-    # п.5 — МНК-навчання (з лекції L_1_3)
+    # п.5 МНК-навчання (L_1_3)
     print("=" * 60)
-    print("Вр.1 п.5 — Статистичне навчання МНК (поліноміальна регресія)")
+    print("Вр.1 | Статистичне навчання МНК (поліноміальна регресія)")
     plot_trend(S_clean_1, Yout_clean_1,
-               "Вр.1 — МНК-згладжування ETF SPY (після очищення)", "vr1_mnk.png")
+               "Вр.1 | МНК-згладжування ETF SPY (після очищення)", "vr1_mnk.png")
 
-    # п.6 — Прогнозування на 0.5 інтервалу вибірки (з лекції L_1_3)
+    # п.6 прогнозування на 0.5 інтервалу вибірки (L_1_3)
     print("=" * 60)
-    print("Вр.1 п.6 — МНК-прогнозування (екстраполяція на 0.5 вибірки)")
+    print("Вр.1 | МНК-прогнозування (екстраполяція на 0.5 вибірки)")
     koef = mt.ceil(n * 0.5)
     Yout_extrapol_1 = MNK_Extrapol(S_clean_1, koef)
-    Stat_characteristics_extrapol(koef, Yout_extrapol_1, "Вр.1 МНК-прогнозування")
+    Stat_characteristics_extrapol(koef, Yout_extrapol_1, "Вр.1 | МНК-прогнозування")
     plot_mnk_extrapol(S_clean_1, Yout_extrapol_1, n, koef, "vr1_forecast.png")
 
-    # п.7 — Аналіз та верифікація
+    # п.7 Аналіз та верифікація
     print("=" * 60)
-    print("Вр.1 п.7 — Аналіз та верифікація")
-    print(f"  R² МНК-моделі = {R2_1:.4f}")
-    print(f"  Прогноз на {koef} точок (0.5 вибірки)")
-    print(f"  Остання реальна ціна      : {prices[-1]:.2f} USD")
-    print(f"  Прогнозована ціна через {koef} кроків: {Yout_extrapol_1[-1, 0]:.2f} USD")
+    print("Вр.1 |  Аналіз та верифікація")
+    print(f"R² МНК-моделі = {R2_1:.4f}")
+    print(f"Прогноз на {koef} точок (0.5 вибірки)")
+    print(f"Остання реальна ціна: {prices[-1]:.2f} USD")
+    print(f"Прогнозована ціна через {koef} кроків: {Yout_extrapol_1[-1, 0]:.2f} USD")
 
-    # ════════════════════════════════════════════════════════
     # ГРУПА ВИМОГ 2
-    # ════════════════════════════════════════════════════════
+
     print("\n" + "=" * 60)
     print("  ГРУПА ВИМОГ 2")
     print("=" * 60)
 
-    # п.2 — Модель з АВ (інший seed)
+    # п.2 Модель з АВ (змінюємо seed)
     SV_AV_2, _ = Model_NORM_AV(prices, nAV_pct=5, Q_AV=3, seed=99)
-    plot_av(prices, SV_AV_2, "Вр.2 — ETF SPY: вихідні дані + АВ", "vr2_av_model.png")
-    Stat_characteristics_in(SV_AV_2, "Вр.2 — Вибірка з АВ")
+    plot_av(prices, SV_AV_2, "Вр.2 | ETF SPY: вихідні дані + АВ", "vr2_av_model.png")
+    Stat_characteristics_in(SV_AV_2, "Вр.2 | Вибірка з АВ")
 
-    # п.3 — Очищення sliding window (з лекції L_1_3)
+    # п.3 очищення sliding window (L_1_3)
     print("=" * 60)
-    print("Вр.2 п.3 — Очищення від АВ: sliding window (з лекції L_1_3)")
+    print("Вр.2 | Очищення від АВ: sliding window (L_1_3)")
     n_Wind = 5
     S_clean_2 = Sliding_Window_AV_Detect_sliding_wind(SV_AV_2.copy(), n_Wind)
-    Stat_characteristics_in(S_clean_2, "Вр.2 — Вибірка очищена від АВ (sliding window)")
-    plot_av(prices, S_clean_2, "Вр.2 — ETF SPY: після очищення sliding window", "vr2_cleaned.png")
+    Stat_characteristics_in(S_clean_2, "Вр.2 | Вибірка очищена від АВ (sliding window)")
+    plot_av(prices, S_clean_2, "Вр.2 | ETF SPY: після очищення sliding window", "vr2_cleaned.png")
 
-    # п.4 — Показники якості
+    # п.4 Показники якості
     print("=" * 60)
-    print("Вр.2 п.4 — Показники якості моделі після очищення")
+    print("Вр.2 | Показники якості моделі після очищення")
     Yout_clean_2 = MNK(S_clean_2)
-    R2_2 = r2_score(S_clean_2, Yout_clean_2, "Вр.2 МНК після очищення від АВ")
-    Stat_characteristics_out(S_clean_2, Yout_clean_2, "Вр.2 стат. характеристики МНК")
-    print(f"  R² = {R2_2:.4f} → застосовується α-β фільтр (Вр.2 п.5)")
+    R2_2 = r2_score(S_clean_2, Yout_clean_2, "Вр.2 | МНК після очищення від АВ")
+    Stat_characteristics_out(S_clean_2, Yout_clean_2, "Вр.2 | стат. характеристики МНК")
+    print(f"  R² = {R2_2:.4f} → застосовується α-β фільтр")
 
-    # п.5 — α-β фільтр (з лекції L_1_4)
+    # п.5 α-β фільтр (L_1_4)
     print("=" * 60)
-    print("Вр.2 п.5 — α-β фільтр (рекурентне згладжування, з лекції L_1_4)")
-    print("  Захист від розбіжності: clipping інновації на рівні 5σ")
+    print("Вр.2 | α-β фільтр (рекурентне згладжування)")
     YoutAB = ABF(SV_AV_2)
-    r2_score(S_clean_2, YoutAB, "Вр.2 α-β фільтр")
+    r2_score(S_clean_2, YoutAB, "Вр.2 | α-β фільтр")
     rmse_before = mt.sqrt(float(np.mean((SV_AV_2 - prices) ** 2)))
     rmse_after = mt.sqrt(float(np.mean((YoutAB[:, 0] - prices) ** 2)))
-    print(f"  RMSE до фільтрації   : {rmse_before:.4f} USD")
+    print(f"  RMSE до фільтрації: {rmse_before:.4f} USD")
     print(f"  RMSE після фільтрації: {rmse_after:.4f} USD")
-    print(f"  Покращення           : {(1 - rmse_after / rmse_before) * 100:.1f}%")
+    print(f"  Покращення: {(1 - rmse_after / rmse_before) * 100:.1f}%")
     plot_abf(SV_AV_2, prices, YoutAB, "vr2_abf.png")
 
-    # п.6 — Аналіз та верифікація
+    # п.6 Аналіз та верифікація
     print("=" * 60)
-    print("Вр.2 п.6 — Аналіз та верифікація")
-    Stat_characteristics_out(S_clean_2, YoutAB,
-                             "Вр.2 α-β фільтр — статистичні характеристики")
+    print("Вр.2 | Аналіз та верифікація")
+    Stat_characteristics_out(S_clean_2, YoutAB,"Вр.2 | α-β фільтр - статистичні характеристики")
 
     print("=" * 60)
-    print("Лабораторну роботу №2 виконано.")
-    print("Вихідні файли:")
-    for f in ["spy_prices.csv", "spy_trend.png", "spy_histogram.png",
-              "vr1_av_model.png", "vr1_cleaned.png", "vr1_mnk.png", "vr1_forecast.png",
-              "vr2_av_model.png", "vr2_cleaned.png", "vr2_abf.png"]:
-        print(f"  {f}")
