@@ -207,15 +207,13 @@ def plot_results(products, criteria_names, matrix, maximize_idx):
 def OLAP_cube(line_column_matrix, integro):
     """
     OLAP-куб: 3D-візуалізація нормалізованих критеріїв та інтегрованої оцінки
-    (з лекції multi_criteria_OLAP.py).
     """
     column_matrix = np.shape(line_column_matrix)
 
-    # нормалізація критеріїв (аналогічно Voronin, з лекції)
+    # нормалізація критеріїв
     Fn = []
     for row in range(column_matrix[0]):
         Fi = matrix_adapter(line_column_matrix, row)
-        # критерії 9 і 10 (індекси 8, 9) — максимізовані: нормалізуємо через 1/Fi
         if row in [8, 9]:
             s = sum(1 / Fi[i] for i in range(column_matrix[1]))
             Fn.append(np.array([(1 / Fi[i]) / s for i in range(column_matrix[1])]))
@@ -231,11 +229,9 @@ def OLAP_cube(line_column_matrix, integro):
     fig = pylab.figure(figsize=(12, 7))
     ax = fig.add_subplot(projection='3d')
 
-    # 10 критеріїв + інтегрована оцінка (як у лекції)
     for row in range(column_matrix[0]):
         ax.bar(xg, Fn[row], zs=row + 1, zdir='y', color=clr, alpha=0.7)
 
-    # інтегрована оцінка на останній площині
     integro_norm = integro / integro.sum()
     ax.bar(xg, integro_norm, zs=column_matrix[0] + 1, zdir='y',
            color='#c5473a', alpha=0.9)
