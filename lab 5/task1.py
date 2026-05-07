@@ -30,29 +30,21 @@ def file_parsing(File_name):
 
 
 def KMeans_gold(X):
-    """
-    Метод кластеризації KMeans для цін ETF GLD.
-    Аналог KMeans_2 з лекції — тільки замість make_blobs використовуються реальні дані.
-    n_clusters=4 — розбиття на 4 цінові кластери.
-    """
     print("=" * 60)
     print("1. KMeans кластеризація (k-середніх)")
 
-    # масштабування (щоб індекс і ціна мали однаковий вплив)
-    scaler   = StandardScaler()
+    scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # ---- кластерний аналіз (аналогічно до лекції) ----
-    kmeans   = KMeans(n_clusters=4, random_state=42)
+    kmeans = KMeans(n_clusters=4, random_state=42)
     kmeans.fit(X_scaled)
     y_kmeans = kmeans.predict(X_scaled)
-    centers  = scaler.inverse_transform(kmeans.cluster_centers_)
+    centers = scaler.inverse_transform(kmeans.cluster_centers_)
 
     print(f"Центри кластерів (індекс, ціна):")
     for k, c in enumerate(centers):
         print(f"  Кластер {k+1}: індекс={c[0]:.0f}, ціна={c[1]:.2f} USD")
 
-    # ---- відображення (аналогічно до лекції) ----
     plt.figure(figsize=(12, 5))
     plt.scatter(X[:, 0], X[:, 1], c=y_kmeans, s=15, cmap='viridis', alpha=0.7)
     plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.8,
@@ -66,7 +58,7 @@ def KMeans_gold(X):
     plt.close()
     print("Графік збережено: kmeans_gold.png")
 
-    # ---- метод ліктя для вибору оптимального k ----
+    # метод ліктя
     inertia = []
     k_range = range(2, 9)
     for k in k_range:
@@ -87,41 +79,30 @@ def KMeans_gold(X):
     return y_kmeans
 
 
-# ---------------------- Ієрархічна кластеризація (з лекції Hierarchy) ----------------------
-
 def Hierarchy_gold(X):
-    """
-    Ієрархічна кластеризація з дендрограмою.
-    Аналог функції Hierarchy() з лекції Klaster.py.
-    Для дендрограми використовується вибірка (кожна 5-та точка) — як у лекції.
-    """
     print("=" * 60)
     print("3. Ієрархічна кластеризація")
 
-    scaler   = StandardScaler()
+    scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # ---- дендрограма (аналогічно до лекції: linked = linkage(X, 'single')) ----
-    # беремо кожну 5-ту точку для читабельної дендрограми
-    step    = max(1, len(X) // 40)
-    X_sub   = X_scaled[::step]
-    labels  = list(range(1, len(X_sub) + 1))
+    step = max(1, len(X) // 40)
+    X_sub = X_scaled[::step]
+    labels = list(range(1, len(X_sub) + 1))
 
-    linked  = linkage(X_sub, 'ward')   # метод Варда (як affinity='euclidean', linkage='ward' з лекції)
+    linked = linkage(X_sub, 'ward')
 
     plt.figure(figsize=(14, 5))
     dendrogram(linked, orientation='top', labels=labels,
                distance_sort='descending', show_leaf_counts=True)
-    plt.title("Ієрархічна кластеризація: дендрограма цін ETF GLD", fontsize=13)
+    plt.title("Ієрархічна кластеризація", fontsize=13)
     plt.xlabel("Індекс точки")
-    plt.ylabel("Відстань (метод Варда)")
+    plt.ylabel("Відстань")
     plt.tight_layout()
     plt.savefig("hierarchy_dendrogram.png", dpi=120)
     plt.close()
     print("Графік збережено: hierarchy_dendrogram.png")
 
-    # ---- AgglomerativeClustering (аналогічно до лекції) ----
-    # n_clusters=4 — аналогічно до KMeans для порівняння
     cluster = AgglomerativeClustering(n_clusters=4, linkage='ward')
     cluster.fit_predict(X_scaled)
 
@@ -139,13 +120,7 @@ def Hierarchy_gold(X):
     return cluster.labels_
 
 
-# ---------------------- Порівняльний аналіз кластерів ----------------------
-
 def compare_clusters(X, d, y_kmeans, y_hier):
-    """
-    Порівняння результатів KMeans та ієрархічної кластеризації.
-    Статистичний аналіз цін по кластерах.
-    """
     print("=" * 60)
     print("4. Аналіз результатів кластеризації")
 
@@ -162,7 +137,6 @@ def compare_clusters(X, d, y_kmeans, y_hier):
     print("\nСтатистика по кластерах ієрархічної кластеризації:")
     print(df_result.groupby('Hierarchy')['Close'].agg(['min','max','mean','count']).round(2))
 
-    # ---- порівняльний графік ----
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     axes[0].scatter(X[:, 0], X[:, 1], c=y_kmeans, s=12, cmap='viridis', alpha=0.7)
@@ -181,7 +155,6 @@ def compare_clusters(X, d, y_kmeans, y_hier):
     plt.close()
     print("Графік збережено: comparison.png")
 
-    # ---- висновки ----
     print("=" * 60)
     print("ВИСНОВКИ:")
     print(f"  Всього спостережень: {len(X)}")
@@ -192,9 +165,6 @@ def compare_clusters(X, d, y_kmeans, y_hier):
         print(f"  KMeans кластер {k}: ціни {row['min']:.1f}–{row['max']:.1f} USD "
               f"(середня {row['mean']:.1f} USD)")
     print()
-    print("  KMeans добре виділяє цінові рівні (горизонтальні смуги).")
-    print("  Ієрархічна кластеризація чутливіша до локальних змін тренду.")
-    print("  KNN успішно класифікує нові точки за навченими мітками KMeans.")
 
 
 if __name__ == '__main__':
