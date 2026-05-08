@@ -1,16 +1,41 @@
-# This is a sample Python script.
+"""
+Сформувати модель нормального закону та визначити статистичні характеристики вибірки
+"""
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+import numpy as np
+import math as mt
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+def stat_characteristics(S):
+    mS = np.mean(S)
+    dS = np.var(S)
+    scvS = mt.sqrt(dS)
+    print('------- статистичні характеристики НОРМАЛЬНОГО закону розподілу ВВ -----')
+    print('кількість елементів вибірки =', len(S))
+    print('математичне сподівання ВВ =', mS)
+    print('дисперсія ВВ =', dS)
+    print('СКВ ВВ =', scvS)
+    print('------------------------------------------------------------------------')
 
 
-# Press the green button in the gutter to run the script.
+def rando_norm(dm, dsig, iter):
+    S = np.random.normal(dm, dsig, iter)
+    stat_characteristics(S)
+
+    plt.hist(S, bins=20, facecolor="blue", alpha=0.5)
+    plt.title("Нормальний закон розподілу ВВ")
+    plt.xlabel("Значення")
+    plt.ylabel("Частота")
+    plt.savefig("normal_distribution.png", dpi=120)
+    plt.close()
+    return S
+
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    dm = 0
+    dsig = 5
+    iter = 10000
+    rando_norm(dm, dsig, iter)
