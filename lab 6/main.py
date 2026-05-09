@@ -61,17 +61,6 @@ NN = NeuralNetwork(inputs, outputs)
 # навчання мережі
 NN.train()
 
-"""
-# приклади результатів тренування
-example = np.array([[1, 1, 1]])
-example_2 = np.array([[0, 1, 1]])
-
-# відображення результатів
-print(NN.predict(example), ' - Correct: ', example[0][0])
-print(NN.predict(example_2), ' - Correct: ', example_2[0][0])
-"""
-
-# 3. Перевірка на навчальній вибірці
 # 3. Перевірка на навчальній вибірці
 print('Перевірка на навчальній вибірці:')
 for i in range(len(inputs)):
@@ -80,10 +69,9 @@ for i in range(len(inputs)):
     ok = '+' if round(pred) == target else '-'
     print(f'  вхід {inputs[i]}  ->  {pred:.4f} | ({target})  {ok}')
 
-# 4. Доведення працездатності — нові вхідні дані (яких не було у навчанні)
-# 4. Доведення працездатності — нові вхідні дані (яких не було у навчанні)
+# 4. нові вхідні дані
 print()
-print('Доведення працездатності — нові вхідні дані:')
+print('Доведення працездатності - нові вхідні дані:')
 new_inputs = [
     np.array([[1, 0, 0]]),
     np.array([[0, 1, 1]]),
