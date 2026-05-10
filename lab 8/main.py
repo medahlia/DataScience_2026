@@ -6,37 +6,28 @@ from sklearn.cluster import KMeans
 import warnings
 warnings.filterwarnings('ignore')
 
+
 FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_data.xlsx')
 FILE_DESC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_description.xlsx')
 
-
 # =============================================================================
-# І. ПІДГОТОВКА ВХІДНИХ ДАНИХ
+# 1. ПІДГОТОВКА ВХІДНИХ ДАНИХ
 # =============================================================================
-
 # 1.1. Парсинг файлу вхідних даних
 print('=' * 65)
 print('ПУНКТ 1. Парсинг файлів параметрів')
 print('=' * 65)
 
-d_sample_data      = pd.read_excel(FILE)
+d_sample_data = pd.read_excel(FILE)
 Title_d_sample_data = d_sample_data.columns
 #only head
-print('d_sample_data=', d_sample_data)
-#not need
-print('-------------  назви стовпців DataFrame  -----------')
-print(Title_d_sample_data)
-
+print('d_sample_data=', d_sample_data.head())
 print('---------  типи даних стовпців DataFrame  -----------')
 print(d_sample_data.dtypes)
-print('---------  пропущені значення стовпців (суми)  ------')
-print(d_sample_data.isnull().sum())
 
 # 1.2. Парсинг файлу пояснень параметрів
 d_data_description = pd.read_excel(FILE_DESC)
-#not need
-print('---------------  d_data_description  ---------------')
-print('d_data_description=', d_data_description)
+print('d_data_description=', d_data_description.head())
 print('----------------------------------------------------')
 
 # 1.3. Первинне формування скорингової таблиці — сегментація ознак клієнта та кредиту
@@ -46,23 +37,15 @@ d_segment_data_description_client_bank = d_data_description[
 n_client_bank = d_segment_data_description_client_bank['Place_of_definition'].size
 d_segment_data_description_client_bank.index = range(
     0, len(d_segment_data_description_client_bank))
-print('---------  d_segment_data_description_client_bank  -----------')
-#not need?
-print('d_segment_data_description_client_bank=',
-      d_segment_data_description_client_bank)
-print('----------------------------------------------------')
 
 # 1.4. Перевірка наявності індикаторів у sample_data
-print('-----------------------------------------')
-#???
 b = d_segment_data_description_client_bank['Field_in_data']
 
 if set(b).issubset(d_sample_data.columns):
     Flag_b = 'Flag_True'
 else:
     Flag_b = 'Flag_False'
-print('УВАГА! сегмент columns за співпадінням:', Flag_b)
-#навіщо ці співпадіння?
+
 n_columns = d_segment_data_description_client_bank['Field_in_data'].size
 j = 0
 for i in range(0, n_columns):
@@ -81,64 +64,38 @@ for i in range(0, n_columns):
         j = j + 1
     else:
         Flag = 'Flag_False'
-print('Індекси співпадінь', Columns_Flag_True)
 
 # 1.5. DataFrame співпадінь
 d_segment_data_description_client_bank_True = \
     d_segment_data_description_client_bank.iloc[Columns_Flag_True]
 d_segment_data_description_client_bank_True.index = range(
     0, len(d_segment_data_description_client_bank_True))
-print('------------ DataFrame співпадінь -------------')
-print(d_segment_data_description_client_bank_True)
-print('-----------------------------------------------')
 
 
 # =============================================================================
-# ПУНКТ 2. Вибір індикаторів скорингової таблиці (10 шт.)
+# ПУНКТ 2. Вибір індикаторів (10 шт.)
 # =============================================================================
 print('\n' + '=' * 65)
-print('ПУНКТ 2. Вибір індикаторів скорингової таблиці (10 шт.)')
+print('ПУНКТ 2. Вибір індикаторів (10)')
 print('=' * 65)
 
-'''
-Обрано 10 числових індикаторів без пропусків.
-Правило Minimax (з лекції scoring.py):
-  "min" — менше значення = краще (витрати, борги, строк кредиту)
-  "max" — більше значення = краще (дохід, освіта, стаж, ліміт)
-Увага: для "max" у формулі Вороніна використовується 1/F,
-  тому всі max-поля мають бути неперервними (не бінарними 0/1),
-  щоб норм. значення не перевищувало 1.0.
-'''
-
 INDICATORS = {
-    'loan_amount'              : 'min',  # сума кредиту: менша → менший ризик
-    'loan_days'                : 'min',  # строк: коротший → швидше погашення
-    'education_id'             : 'max',  # освіта: вища → надійніший позичальник
-    'seniority_years'          : 'max',  # стаж: більший → стабільна зайнятість
-    'monthly_income'           : 'max',  # дохід: більший → краща платоспроможність
-    'monthly_expenses'         : 'min',  # витрати: менші → більше для погашення
-    'other_loans_about_current': 'min',  # борги: менші → менше навантаження
-    'other_loans_about_monthly': 'min',  # виплати по боргах: менші → краще
-    'amount_limit'             : 'max',  # затверджений ліміт: більший → банк довіряє
-    'product_dpr'              : 'min',  # ставка: нижча → дешевший кредит
+    'loan_amount'              : 'min',
+    'loan_days'                : 'min',
+    'education_id'             : 'max',
+    'seniority_years'          : 'max',
+    'monthly_income'           : 'max',
+    'monthly_expenses'         : 'min',
+    'other_loans_about_current': 'min',
+    'other_loans_about_monthly': 'min',
+    'amount_limit'             : 'max',
+    'product_dpr'              : 'min',
 }
 
 print(f"\n{'Індикатор':<35} {'Minimax':<8} Обґрунтування")
-print('-' * 85)
-explanations = {
-    'loan_amount'              : 'менша сума → менший ризик неповернення',
-    'loan_days'                : 'коротший строк → швидше погашення',
-    'education_id'             : 'вища освіта → надійніший позичальник',
-    'seniority_years'          : 'більший стаж → стабільна зайнятість',
-    'monthly_income'           : 'більший дохід → краща платоспроможність',
-    'monthly_expenses'         : 'менші витрати → більше коштів для погашення',
-    'other_loans_about_current': 'менші борги → менше фінансове навантаження',
-    'other_loans_about_monthly': 'менші виплати → більше вільних коштів',
-    'amount_limit'             : 'більший ліміт = банк вже оцінив клієнта позитивно',
-    'product_dpr'              : 'нижча ставка → дешевший кредит',
-}
+print('-' * 50)
 for field, mm in INDICATORS.items():
-    print(f"  {field:<33} {mm:<8} {explanations[field]}")
+    print(f"  {field:<33} {mm:<8}")
 
 
 # =============================================================================
@@ -154,7 +111,6 @@ cols = list(INDICATORS.keys())
 d_segment_sample_cleaning = d_sample_data[cols].copy()
 d_segment_sample_cleaning.index = range(0, len(d_segment_sample_cleaning))
 
-#not need
 print('---- пропуски даних сегменту DataFrame --------')
 print(d_segment_sample_cleaning.isnull().sum())
 print('-----------------------------------------------')
@@ -164,17 +120,12 @@ d_segment_sample_cleaning = d_segment_sample_cleaning.dropna()
 d_segment_sample_cleaning.index = range(0, len(d_segment_sample_cleaning))
 
 d_segment_sample_cleaning.to_excel('d_segment_sample_cleaning.xlsx', index=False)
-print('--- Контроль наявності пропусків даних після очищення ---')
-print(d_segment_sample_cleaning.isnull().sum())
-print('---------- DataFrame вхідних даних - скорингова карта -----------')
-print(d_segment_sample_cleaning)
+print('---------- DataFrame вхідних даних -----------')
+print(d_segment_sample_cleaning.head())
 print('-----------------------------------------------------------------')
 
-
 # =============================================================================
-# ІІ. ФОРМУВАННЯ СКОРИНГОВОЇ МОДЕЛІ
-# =============================================================================
-
+# СКОРИНГОВА МОДЕЛЬ
 # =============================================================================
 # ПУНКТ 4. Розрахунок інтегрованої оцінки Scor (метод Вороніна)
 # =============================================================================
@@ -208,8 +159,6 @@ for j, (field, mm) in enumerate(INDICATORS.items()):
             min_min = d_segment_sample_max[field] + (2 * delta_d)
             d_segment_sample_minimax_Normal[i, j] = \
                 (1 / (delta_d + d_segment_sample_cleaning[field][i])) / min_min
-
-print(d_segment_sample_minimax_Normal)
 np.savetxt('d_segment_sample_minimax_Normal.txt', d_segment_sample_minimax_Normal)
 
 # Інтегрована багатокритеріальна оцінка — SCOR (з лекції scoring.py)
@@ -221,7 +170,7 @@ def Voronin(d_segment_sample_minimax_Normal, n, m):
     Scor = поріг прийняття рішення (адаптований до обсягу вибірки).
     '''
     Integro = np.zeros(m)
-    Scor    = np.zeros(m)
+    Scor = np.zeros(m)
     for i in range(m):
         Sum_Voronin = 0
         for j in range(n):
@@ -229,7 +178,7 @@ def Voronin(d_segment_sample_minimax_Normal, n, m):
         Integro[i] = Sum_Voronin
         # Поріг: медіана Integro — аналог Scor=1000 з лекції,
         # адаптований до реального розподілу даних вибірки
-        Scor[i]    = np.median(Integro[:i + 1])  # обчислюється після циклу нижче
+        Scor[i] = np.median(Integro[:i + 1])  # обчислюється після циклу нижче
     # Перераховуємо Scor як фіксовану медіану всього масиву
     scor_threshold = np.median(Integro)
     Scor[:] = scor_threshold
@@ -240,12 +189,12 @@ Integro, Scor = Voronin(d_segment_sample_minimax_Normal, n, m)
 SCOR_THRESHOLD = Scor[0]
 
 print(f'\nІнтегрована оцінка Integro:')
-print(f'  Мін    : {Integro.min():.2f}  (найкращий позичальник)')
-print(f'  Макс   : {Integro.max():.2f}  (найгірший позичальник)')
+print(f'  Мін: {Integro.min():.2f}  (найкращий)')
+print(f'  Макс: {Integro.max():.2f}  (найгірший)')
 print(f'  Середня: {Integro.mean():.2f}')
 print(f'  Медіана: {np.median(Integro):.2f}')
-print(f'  СКВ    : {Integro.std():.2f}')
-print(f'\nПоріг Scor: {SCOR_THRESHOLD:.2f}')
+print(f'  СКВ: {Integro.std():.2f}')
+print(f'  Поріг Scor: {SCOR_THRESHOLD:.2f}')
 print(f'  Видати кредит (Integro < Scor): {(Integro < SCOR_THRESHOLD).sum()} позичальників')
 print(f'  Відмовити     (Integro ≥ Scor): {(Integro >= SCOR_THRESHOLD).sum()} позичальників')
 
@@ -269,14 +218,14 @@ approve_cluster = 0 if mean_0 < mean_1 else 1
 
 cluster_decision = np.where(labels == approve_cluster, 'Видати', 'Відмовити')
 n_approve = (cluster_decision == 'Видати').sum()
-n_reject  = (cluster_decision == 'Відмовити').sum()
+n_reject = (cluster_decision == 'Відмовити').sum()
 
-print(f'Кластер "Видати кредит" : {n_approve} позичальників  '
-      f'(середній Integro: {Integro[labels == approve_cluster].mean():.2f})')
-print(f'Кластер "Відмовити"     : {n_reject} позичальників  '
-      f'(середній Integro: {Integro[labels != approve_cluster].mean():.2f})')
-print(f'\nРезультат: Видати — {n_approve} ({n_approve/m*100:.1f}%),  '
-      f'Відмовити — {n_reject} ({n_reject/m*100:.1f}%)')
+print(f'Кластер "Видати кредит" | '
+      f'середній Integro: {Integro[labels == approve_cluster].mean():.2f}')
+print(f'Кластер "Відмовити"     | '
+      f'середній Integro: {Integro[labels != approve_cluster].mean():.2f}')
+print(f'\nРезультат: Видати: {n_approve} ({n_approve/m*100:.1f}%),  '
+      f'Відмовити: {n_reject} ({n_reject/m*100:.1f}%)')
 
 # Збереження результатів у таблицю
 df_result = d_segment_sample_cleaning.copy()
@@ -290,7 +239,7 @@ print('Результати збережено: scoring_results.xlsx')
 # ПУНКТ 6. Візуалізація результатів (графіки + файли)
 # =============================================================================
 mask_approve = cluster_decision == 'Видати'
-mask_reject  = cluster_decision == 'Відмовити'
+mask_reject = cluster_decision == 'Відмовити'
 idx = np.arange(m)
 
 # --- 6.1. Графік Integro_Scor (з лекції: plt.plot(Integro) + plt.plot(Scor)) ---
