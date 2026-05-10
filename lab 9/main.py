@@ -137,3 +137,8 @@ for i in range(n):
 ax.set_title('Сітка відстаней між 10 пожежними станціями (км)', fontsize=14)
 plt.tight_layout()
 plt.show()
+
+distance_m = fire_stations.iloc[0].geometry.distance(fire_stations.iloc[2].geometry)
+distance_km = distance_m / 1000
+print(f'Відстань у EPSG:3857: {distance_m:.2f} метрів')
+print(f'Відстань у кілометрах: {distance_km:.2f} км')
